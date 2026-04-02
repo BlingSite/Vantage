@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import VantageLogo from "./VantageLogo";
+import AuthControls from "./AuthControls";
 
 function IconDashboard({ className }) {
   return (
@@ -82,6 +83,8 @@ export default function AppSidebar() {
           );
         })}
       </nav>
+
+      <AuthControls />
     </aside>
   );
 }
