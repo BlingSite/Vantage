@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketStatusBar from "@/components/MarketStatusBar";
+import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
 
 export default function Home() {
   const [firstName, setFirstName] = useState(null);
@@ -26,18 +27,20 @@ export default function Home() {
     <div>
       <MarketStatusBar />
       <div className="mx-auto max-w-6xl px-6 pt-10 pb-6">
-        <div className="flex flex-col justify-center animate-fade-in-up">
-          <p className="mb-2 text-xs font-semibold tracking-widest text-gray-400 uppercase">
-            Dashboard
-          </p>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-[2.75rem] leading-tight">
-            Welcome back
-            {firstName ? `, ${firstName}` : ""}.
-          </h1>
-          <p className="mt-3 text-base leading-relaxed text-gray-500 max-w-md">
-            Monitor markets, manage watchlists, and receive alerts.
-          </p>
-
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between animate-fade-in-up">
+          <div className="flex flex-col justify-center min-w-0 flex-1">
+            <p className="mb-2 text-xs font-semibold tracking-widest text-gray-400 uppercase">
+              Dashboard
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-[2.75rem] leading-tight">
+              Welcome back
+              {firstName ? `, ${firstName}` : ""}.
+            </h1>
+            <p className="mt-3 text-base leading-relaxed text-gray-500 max-w-md">
+              Monitor markets, manage watchlists, and receive alerts.
+            </p>
+          </div>
+          <EconomicCalendarWidget />
         </div>
       </div>
 

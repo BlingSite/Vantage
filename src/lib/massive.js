@@ -374,6 +374,28 @@ export async function getTickerNews(symbol, options = {}) {
 }
 
 /**
+ * Upcoming earnings (Benzinga partner feed).
+ * GET /benzinga/v1/earnings
+ * @param {string[]} symbols
+ * @param {{ from?: string, limit?: number }} [options] from = YYYY-MM-DD
+ */
+export async function getBenzingaUpcomingEarnings(symbols, options = {}) {
+  const uniq = [...new Set(symbols.map((s) => String(s).trim().toUpperCase()).filter(Boolean))];
+  if (uniq.length === 0) {
+    return { results: [] };
+  }
+  const from = options.from ?? new Date().toISOString().slice(0, 10);
+  const limit = Math.min(Math.max(options.limit ?? 200, 1), 500);
+  const params = {
+    "ticker.any_of": uniq.slice(0, 20).join(","),
+    "date.gte": from,
+    sort: "date.asc",
+    limit: String(limit),
+  };
+  return request("/benzinga/v1/earnings", params);
+}
+
+/**
  * General market news (no specific ticker required).
  * GET /v2/reference/news
  * @param {{ limit?: number, ticker?: string, published_utc_gte?: string, published_utc_lte?: string, order?: string, sort?: string }} [options]
