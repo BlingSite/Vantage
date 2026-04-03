@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-
-
+import MarketStatusBar from "@/components/MarketStatusBar";
 
 export default function Home() {
   const [firstName, setFirstName] = useState(null);
@@ -25,6 +24,7 @@ export default function Home() {
 
   return (
     <div>
+      <MarketStatusBar />
       <div className="mx-auto max-w-6xl px-6 pt-10 pb-6">
         <div className="flex flex-col justify-center animate-fade-in-up">
           <p className="mb-2 text-xs font-semibold tracking-widest text-gray-400 uppercase">

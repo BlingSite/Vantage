@@ -94,12 +94,12 @@ export default function MarketStatusBar() {
 
   return (
     <div
-      className="sticky top-0 z-30 border-b border-gray-200/90 bg-white/90 backdrop-blur-md supports-backdrop-filter:bg-white/75"
+      className="sticky top-0 z-30 border-b border-gray-200/80 bg-white/95 backdrop-blur-sm supports-backdrop-filter:bg-white/80"
       role="status"
       aria-live="polite"
       aria-label="US stock market session"
     >
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-6 py-2 text-[11px] leading-tight sm:text-xs">
+      <div className="mx-auto flex min-h-8 max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-6 py-1.5 text-[11px] leading-snug sm:gap-x-5 sm:text-xs">
         <div
           className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-semibold ${styles.pill} ${styles.text}`}
         >
