@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketStatusBar from "@/components/MarketStatusBar";
 import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
+import SectorPerformanceHeatmap from "@/components/SectorPerformanceHeatmap";
 
 export default function Home() {
   const [firstName, setFirstName] = useState(null);
@@ -42,6 +43,10 @@ export default function Home() {
           </div>
           <EconomicCalendarWidget />
         </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-6 pb-10 animate-fade-in-up">
+        <SectorPerformanceHeatmap />
       </div>
 
       <footer className="border-t border-gray-200/60 py-8">
