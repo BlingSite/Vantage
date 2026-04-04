@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MarketStatusBar from "@/components/MarketStatusBar";
+import USMarketTickerWidget from "@/components/USMarketTickerWidget";
 import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
 import SectorPerformanceHeatmap from "@/components/SectorPerformanceHeatmap";
 
@@ -40,6 +41,7 @@ export default function Home() {
             <p className="mt-3 text-base leading-relaxed text-gray-500 max-w-md">
               Monitor markets, manage watchlists, and receive alerts.
             </p>
+            <USMarketTickerWidget embedded />
           </div>
           <EconomicCalendarWidget />
         </div>
