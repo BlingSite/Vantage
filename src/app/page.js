@@ -5,6 +5,8 @@ import MarketStatusBar from "@/components/MarketStatusBar";
 import USMarketTickerWidget from "@/components/USMarketTickerWidget";
 import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
 import SectorPerformanceHeatmap from "@/components/SectorPerformanceHeatmap";
+import TopMovers from "@/components/TopMovers";
+import PersonalizedInsightSummary from "@/components/PersonalizedInsightSummary";
 
 export default function Home() {
   return (
@@ -19,6 +21,12 @@ export default function Home() {
           <div className="flex min-w-0 flex-1 flex-col justify-center">
             <USMarketTickerWidget embedded />
           </div>
+        </div>
+        <div className="mt-10 max-w-3xl">
+          <PersonalizedInsightSummary />
+        </div>
+        <div className="mt-10">
+          <TopMovers />
         </div>
         <div className="mt-10">
           <SectorPerformanceHeatmap />
