@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 const US_ROW_ORDER = [
   { symbol: "I:DJI", displayName: "Dow Jones" },
   { symbol: "I:SPX", displayName: "S&P 500" },
-  { symbol: "I:NDX", displayName: "Nasdaq 100" },
+  { symbol: "I:COMP", displayName: "Nasdaq Composite" },
   { symbol: "I:VIX", displayName: "VIX" },
   { symbol: "GLD", displayName: "Gold" },
   { symbol: "USO", displayName: "Oil" },

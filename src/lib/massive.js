@@ -22,13 +22,19 @@ function getToken() {
 /**
  * @param {string} path - e.g. "/v2/snapshot/locale/us/markets/stocks/tickers/AAPL"
  * @param {Record<string, string>} [params] - query params (apiKey is added automatically)
+ * @param {{ cache?: RequestCache }} [fetchInit] - pass `{ cache: "no-store" }` for live quotes (avoids stale Next.js Data Cache)
  * @returns {Promise<unknown>}
  */
-async function request(path, params = {}) {
+async function request(path, params = {}, fetchInit = {}) {
   const token = getToken();
   const searchParams = new URLSearchParams({ ...params, apiKey: token });
   const url = `${MASSIVE_BASE}${path}?${searchParams.toString()}`;
-  const res = await fetch(url, { next: { revalidate: 60 } });
+  const res = await fetch(
+    url,
+    fetchInit.cache === "no-store"
+      ? { cache: "no-store" }
+      : { next: { revalidate: 60 } }
+  );
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Massive API error ${res.status}: ${text}`);
@@ -44,13 +50,16 @@ async function request(path, params = {}) {
  * Single ticker snapshot — current price, today's change, volume, prev day, etc.
  * GET /v2/snapshot/locale/us/markets/stocks/tickers/{stocksTicker}
  * @param {string} symbol
+ * @param {{ cache?: RequestCache }} [fetchInit]
  */
-export async function getSnapshot(symbol) {
+export async function getSnapshot(symbol, fetchInit = {}) {
   if (!symbol || typeof symbol !== "string") {
     throw new Error("Symbol is required");
   }
   const data = await request(
-    `/v2/snapshot/locale/us/markets/stocks/tickers/${encodeURIComponent(symbol.toUpperCase())}`
+    `/v2/snapshot/locale/us/markets/stocks/tickers/${encodeURIComponent(symbol.toUpperCase())}`,
+    {},
+    fetchInit
   );
   return data?.ticker ?? data;
 }
@@ -67,18 +76,23 @@ export async function getFullMarketSnapshot() {
  * Index ticker snapshots (Dow, S&P 500, etc.) — values are index points, not ETF prices.
  * GET /v3/snapshot/indices?ticker.any_of=...
  * @param {string[]} tickers - e.g. ["I:DJI", "I:SPX"]
+ * @param {{ cache?: RequestCache }} [fetchInit]
  */
-export async function getIndicesSnapshot(tickers) {
+export async function getIndicesSnapshot(tickers, fetchInit = {}) {
   if (!Array.isArray(tickers) || tickers.length === 0) {
     return { results: [] };
   }
   const tickerAnyOf = tickers
     .map((t) => String(t).trim().toUpperCase())
     .join(",");
-  return request("/v3/snapshot/indices", {
-    "ticker.any_of": tickerAnyOf,
-    limit: String(Math.min(tickers.length, 250)),
-  });
+  return request(
+    "/v3/snapshot/indices",
+    {
+      "ticker.any_of": tickerAnyOf,
+      limit: String(Math.min(tickers.length, 250)),
+    },
+    fetchInit
+  );
 }
 
 // ---------------------------------------------------------------------------
