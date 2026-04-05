@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 
 const US_ROW_ORDER = [
-  { symbol: "DIA", displayName: "Dow" },
-  { symbol: "SPY", displayName: "S&P 500" },
-  { symbol: "QQQ", displayName: "Nasdaq" },
-  { symbol: "VIXY", displayName: "VIX" },
+  { symbol: "I:DJI", displayName: "Dow Jones" },
+  { symbol: "I:SPX", displayName: "S&P 500" },
+  { symbol: "I:NDX", displayName: "Nasdaq 100" },
+  { symbol: "I:VIX", displayName: "VIX" },
   { symbol: "GLD", displayName: "Gold" },
   { symbol: "USO", displayName: "Oil" },
 ];

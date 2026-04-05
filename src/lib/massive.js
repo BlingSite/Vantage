@@ -63,6 +63,24 @@ export async function getFullMarketSnapshot() {
   return request("/v2/snapshot/locale/us/markets/stocks/tickers");
 }
 
+/**
+ * Index ticker snapshots (Dow, S&P 500, etc.) — values are index points, not ETF prices.
+ * GET /v3/snapshot/indices?ticker.any_of=...
+ * @param {string[]} tickers - e.g. ["I:DJI", "I:SPX"]
+ */
+export async function getIndicesSnapshot(tickers) {
+  if (!Array.isArray(tickers) || tickers.length === 0) {
+    return { results: [] };
+  }
+  const tickerAnyOf = tickers
+    .map((t) => String(t).trim().toUpperCase())
+    .join(",");
+  return request("/v3/snapshot/indices", {
+    "ticker.any_of": tickerAnyOf,
+    limit: String(Math.min(tickers.length, 250)),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Aggregates / OHLC
 // ---------------------------------------------------------------------------
