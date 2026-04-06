@@ -88,7 +88,9 @@ export default function TopMovers({ className = "" }) {
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Top Movers</h2>
           <p className="mt-0.5 text-[11px] text-gray-500 leading-snug">
-            Biggest % gainers and losers today — quick context for headlines.
+            {data?.prevDay
+              ? "Previous trading day — open to close change."
+              : "Biggest % gainers and losers today — quick context for headlines."}
           </p>
         </div>
         {data?.updatedAt && (
