@@ -436,19 +436,41 @@ export default function WatchlistDashboard() {
     if (!stock) return;
 
     try {
+      let deleted = false;
+
       if (stock.watchlistItemId) {
-        await supabase
+        const { error } = await supabase
           .from("watchlist_items")
           .delete()
           .eq("id", stock.watchlistItemId);
-      } else if (stock.id) {
-        await supabase
+        if (error) {
+          console.error("watchlist_items delete failed:", error);
+        } else {
+          deleted = true;
+        }
+      }
+
+      if (!deleted && stock.id) {
+        const { error } = await supabase
           .from("watchlist_items")
           .delete()
           .eq("watchlist_id", activeWatchlist.id)
           .eq("stock_id", stock.id);
+        if (error) {
+          console.error("watchlist_items delete by stock_id failed:", error);
+        } else {
+          deleted = true;
+        }
       }
-      await supabase.from("alerts").delete().eq("symbol", symbol);
+
+      if (!deleted) {
+        console.error("Could not delete stock from DB, watchlistItemId:", stock.watchlistItemId, "stockId:", stock.id);
+      }
+
+      // Clean up alerts (non-blocking)
+      supabase.from("alerts").delete().eq("symbol", symbol).then(({ error }) => {
+        if (error) console.error("alerts cleanup failed:", error);
+      });
 
       const updatedWatchlists = watchlists.map((wl) =>
         wl.id === activeWatchlist.id ? { ...wl, stocks: wl.stocks.filter((s) => s.symbol !== symbol) } : wl
@@ -722,7 +744,7 @@ export default function WatchlistDashboard() {
                   <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Change</th>
                   <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Dividend Yield</th>
                   <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Avg Volume</th>
-                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Alert</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -769,21 +791,12 @@ export default function WatchlistDashboard() {
                       })()}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {stock.hasAlert ? (
-                        <button
-                          onClick={() => handleRemoveStock(stock.symbol)}
-                          className="px-4 py-1.5 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleSetAlert(stock.symbol)}
-                          className="px-4 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          Set Alert
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleRemoveStock(stock.symbol)}
+                        className="px-4 py-1.5 border border-red-200 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

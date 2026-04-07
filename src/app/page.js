@@ -6,6 +6,7 @@ import USMarketTickerWidget from "@/components/USMarketTickerWidget";
 import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
 import SectorPerformanceHeatmap from "@/components/SectorPerformanceHeatmap";
 import TopMovers from "@/components/TopMovers";
+import EarningsThisWeek from "@/components/EarningsThisWeek";
 import PersonalizedInsightSummary from "@/components/PersonalizedInsightSummary";
 
 export default function Home() {
@@ -27,6 +28,9 @@ export default function Home() {
         </div>
         <div className="mt-10">
           <TopMovers />
+        </div>
+        <div className="mt-10">
+          <EarningsThisWeek />
         </div>
         <div className="mt-10">
           <SectorPerformanceHeatmap />

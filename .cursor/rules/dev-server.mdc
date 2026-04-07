@@ -1,0 +1,10 @@
+---
+description: Local development server configuration
+alwaysApply: true
+---
+
+# Dev Server
+
+The local development server runs on `localhost:4000`.
+
+When testing API endpoints or accessing the app locally, always use `http://localhost:4000`.
