@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import MarketStatusBar from "@/components/MarketStatusBar";
-import USMarketTickerWidget from "@/components/USMarketTickerWidget";
+import MarketOverviewPanel from "@/components/MarketOverviewPanel";
 import EconomicCalendarWidget from "@/components/EconomicCalendarWidget";
 import SectorPerformanceHeatmap from "@/components/SectorPerformanceHeatmap";
 import TopMovers from "@/components/TopMovers";
@@ -19,9 +19,7 @@ export default function Home() {
         </p>
         <div className="mt-10 flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
           <EconomicCalendarWidget />
-          <div className="flex min-w-0 flex-1 flex-col justify-center">
-            <USMarketTickerWidget embedded />
-          </div>
+          <MarketOverviewPanel className="min-w-0 flex-1" />
         </div>
         <div className="mt-10 max-w-3xl">
           <PersonalizedInsightSummary />

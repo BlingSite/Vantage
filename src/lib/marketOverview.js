@@ -42,9 +42,10 @@ const ALL_ETF_SYMBOLS = [
  * significantly from the underlying (VIX, Gold, Oil).
  */
 const YAHOO_OVERRIDES = {
-  "I:VIX": "%5EVIX",  // Cboe Volatility Index
-  GLD: "GC%3DF",      // Gold futures (COMEX)
-  USO: "CL%3DF",      // WTI Crude Oil futures (NYMEX)
+  "I:COMP": "%5EIXIC", // Nasdaq Composite Index
+  "I:VIX": "%5EVIX",   // Cboe Volatility Index
+  GLD: "GC%3DF",       // Gold futures (COMEX)
+  USO: "CL%3DF",       // WTI Crude Oil futures (NYMEX)
 };
 
 /**
@@ -189,6 +190,17 @@ export async function fetchMarketOverview() {
       continue;
     }
 
+    if (t.symbol === "I:COMP" && yahooData["I:COMP"]) {
+      const yv = yahooData["I:COMP"];
+      snapshots[t.symbol] = {
+        price: yv.price,
+        change: yv.change,
+        changePercent: yv.changePercent,
+        prevClose: yv.prevClose,
+      };
+      continue;
+    }
+
     if (t.symbol === "I:COMP") {
       const compIdxRow = lastTwoBarsRow(barsMap["I:COMP"]);
       if (compIdxRow) {
@@ -257,6 +269,10 @@ export async function fetchMarketOverview() {
       continue;
     }
     if (t.symbol === "I:COMP") {
+      if (yahooData["I:COMP"]?.sparkline?.length > 0) {
+        sparklines[t.symbol] = yahooData["I:COMP"].sparkline;
+        continue;
+      }
       const idxBars = barsMap["I:COMP"]?.results ?? [];
       if (idxBars.length > 0) {
         sparklines[t.symbol] = idxBars.map((b) => Number(b.c));
