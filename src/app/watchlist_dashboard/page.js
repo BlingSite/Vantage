@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import VantageLogo from "@/components/VantageLogo";
@@ -74,6 +74,13 @@ export default function WatchlistDashboard() {
   const [dividendInsightsLoading, setDividendInsightsLoading] = useState(false);
   const [earningsData, setEarningsData] = useState({});
   const [earningsLoading, setEarningsLoading] = useState(false);
+
+  const [tickerSearchResults, setTickerSearchResults] = useState([]);
+  const [tickerSearchLoading, setTickerSearchLoading] = useState(false);
+  const [showTickerDropdown, setShowTickerDropdown] = useState(false);
+  const [tickerHighlightIndex, setTickerHighlightIndex] = useState(-1);
+  const tickerDropdownRef = useRef(null);
+  const tickerSearchTimer = useRef(null);
 
   // New watchlist form state
   const [newWatchlistName, setNewWatchlistName] = useState("");
@@ -358,6 +365,51 @@ export default function WatchlistDashboard() {
     }
   };
 
+  const searchTicker = useCallback((query) => {
+    clearTimeout(tickerSearchTimer.current);
+    if (!query.trim()) {
+      setTickerSearchResults([]);
+      setShowTickerDropdown(false);
+      return;
+    }
+    setTickerSearchLoading(true);
+    setShowTickerDropdown(true);
+    tickerSearchTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/stock/massive/search?q=${encodeURIComponent(query.trim())}&limit=8`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setTickerSearchResults(data.results ?? []);
+        } else {
+          setTickerSearchResults([]);
+        }
+      } catch {
+        setTickerSearchResults([]);
+      } finally {
+        setTickerSearchLoading(false);
+      }
+    }, 250);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (tickerDropdownRef.current && !tickerDropdownRef.current.contains(e.target)) {
+        setShowTickerDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelectTicker = (result) => {
+    setTickerInput(result.symbol);
+    setShowTickerDropdown(false);
+    setTickerSearchResults([]);
+    setTickerHighlightIndex(-1);
+  };
+
   const handleAddSymbol = async () => {
     if (!tickerInput.trim() || !activeWatchlist) return;
 
@@ -424,6 +476,9 @@ export default function WatchlistDashboard() {
       setWatchlists(updatedWatchlists);
       setActiveWatchlist(updatedWatchlists.find((wl) => wl.id === wlId));
       setTickerInput("");
+      setTickerSearchResults([]);
+      setShowTickerDropdown(false);
+      setTickerHighlightIndex(-1);
     } catch (err) {
       console.error("Failed to add symbol:", err);
     }
@@ -716,14 +771,86 @@ export default function WatchlistDashboard() {
 
           {/* Add Symbol Input */}
           <div className="flex gap-4 mb-6">
-            <input
-              type="text"
-              value={tickerInput}
-              onChange={(e) => setTickerInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddSymbol()}
-              placeholder="Enter ticker symbol..."
-              className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div className="relative flex-1" ref={tickerDropdownRef}>
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={tickerInput}
+                  onChange={(e) => {
+                    setTickerInput(e.target.value);
+                    searchTicker(e.target.value);
+                    setTickerHighlightIndex(-1);
+                  }}
+                  onFocus={() => {
+                    if (tickerSearchResults.length > 0) setShowTickerDropdown(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setTickerHighlightIndex((prev) =>
+                        prev < tickerSearchResults.length - 1 ? prev + 1 : 0
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setTickerHighlightIndex((prev) =>
+                        prev > 0 ? prev - 1 : tickerSearchResults.length - 1
+                      );
+                    } else if (e.key === "Enter") {
+                      if (tickerHighlightIndex >= 0 && tickerSearchResults[tickerHighlightIndex]) {
+                        handleSelectTicker(tickerSearchResults[tickerHighlightIndex]);
+                      } else {
+                        handleAddSymbol();
+                      }
+                    } else if (e.key === "Escape") {
+                      setShowTickerDropdown(false);
+                    }
+                  }}
+                  placeholder="Enter ticker symbol..."
+                  className="w-full pl-10 pr-8 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {tickerInput && (
+                  <button
+                    onClick={() => {
+                      setTickerInput("");
+                      setTickerSearchResults([]);
+                      setShowTickerDropdown(false);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {showTickerDropdown && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                  {tickerSearchLoading && tickerSearchResults.length === 0 && (
+                    <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+                  )}
+                  {!tickerSearchLoading && tickerSearchResults.length === 0 && tickerInput.trim() && (
+                    <div className="px-4 py-3 text-sm text-gray-500">No results found</div>
+                  )}
+                  {tickerSearchResults.map((result, idx) => (
+                    <button
+                      key={result.symbol}
+                      onClick={() => handleSelectTicker(result)}
+                      className={`w-full flex items-center gap-4 px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-0 ${
+                        idx === tickerHighlightIndex
+                          ? "bg-blue-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="font-semibold text-gray-900 w-16 shrink-0">{result.symbol}</span>
+                      <span className="text-gray-600 text-sm truncate">{result.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={handleAddSymbol}
               disabled={!activeWatchlist}
