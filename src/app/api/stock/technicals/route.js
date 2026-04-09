@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCustomBars, getTickerOverview } from "@/lib/massive";
+import { getCustomBars, getTickerOverview, getFinancials } from "@/lib/massive";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export async function GET(request) {
 
     const perSymbol = await Promise.all(
       symbols.map(async (symbol) => {
-        const [barsResult, overviewResult] = await Promise.allSettled([
+        const [barsResult, overviewResult, financialsResult] = await Promise.allSettled([
           getCustomBars(symbol, {
             timespan: "day",
             from: oneYearAgo,
@@ -45,6 +45,7 @@ export async function GET(request) {
             sort: "asc",
           }),
           getTickerOverview(symbol),
+          getFinancials(symbol, { limit: 4, timeframe: "quarterly" }),
         ]);
 
         const bars =
@@ -55,6 +56,10 @@ export async function GET(request) {
           overviewResult.status === "fulfilled"
             ? overviewResult.value ?? {}
             : {};
+        const financials =
+          financialsResult.status === "fulfilled"
+            ? financialsResult.value?.results ?? []
+            : [];
 
         const closes = bars.map((b) => b.c).filter((c) => c != null);
         const highs = bars.map((b) => b.h).filter((h) => h != null);
@@ -76,11 +81,7 @@ export async function GET(request) {
         const marketCap =
           overview.market_cap != null ? overview.market_cap / 1e6 : null;
 
-        const peRatio =
-          overview.pe_ratio ??
-          overview.price_earnings_ratio ??
-          overview.pe ??
-          null;
+        const peRatio = computePERatio(financials, currentPrice);
 
         const beta = overview.beta ?? null;
 
@@ -143,6 +144,34 @@ function computeSMA(closes, period) {
   const slice = closes.slice(-period);
   const sum = slice.reduce((a, b) => a + b, 0);
   return Number((sum / period).toFixed(2));
+}
+
+/**
+ * Trailing-twelve-month P/E from the last 4 quarterly financials.
+ * Sums diluted EPS (or basic EPS) from each quarter, then divides price by TTM EPS.
+ */
+function computePERatio(financials, currentPrice) {
+  if (!Array.isArray(financials) || financials.length === 0 || currentPrice == null) {
+    return null;
+  }
+  let ttmEps = 0;
+  let quartersUsed = 0;
+  for (const filing of financials) {
+    const inc = filing?.financials?.income_statement;
+    if (!inc) continue;
+    const eps =
+      inc.diluted_earnings_per_share?.value ??
+      inc.basic_earnings_per_share?.value ??
+      null;
+    if (eps == null) continue;
+    ttmEps += eps;
+    quartersUsed++;
+  }
+  if (quartersUsed === 0 || ttmEps <= 0) return null;
+  if (quartersUsed < 4) {
+    ttmEps = (ttmEps / quartersUsed) * 4;
+  }
+  return Number((currentPrice / ttmEps).toFixed(2));
 }
 
 function computeSupportResistance(bars, currentPrice) {

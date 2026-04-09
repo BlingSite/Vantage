@@ -351,7 +351,11 @@ export async function getFinancials(symbol, options = {}) {
   if (!symbol || typeof symbol !== "string") {
     throw new Error("Symbol is required");
   }
-  const params = { "ticker.any_of": symbol.toUpperCase() };
+  const params = {
+    ticker: symbol.toUpperCase(),
+    order: "desc",
+    sort: "filing_date",
+  };
   if (options.limit) params.limit = String(options.limit);
   if (options.timeframe) params.timeframe = options.timeframe;
   if (options.include_sources) params.include_sources = "true";

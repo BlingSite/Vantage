@@ -56,10 +56,13 @@ export async function GET(request) {
       const prevClose = prevDay.c ?? null;
       const currentPrice = day.c ?? snap.lastTrade?.p ?? null;
 
+      const change = currentPrice != null && prevClose != null ? currentPrice - prevClose : null;
+      const changePerc = change != null && prevClose ? (change / prevClose) * 100 : null;
+
       payload[symbol] = {
         c: currentPrice,
-        d: snap.todaysChange ?? (currentPrice && prevClose ? currentPrice - prevClose : null),
-        dp: snap.todaysChangePerc ?? null,
+        d: change,
+        dp: changePerc,
         v: day.v ?? snap.min?.av ?? prevDay.v ?? null,
         h: day.h ?? null,
         l: day.l ?? null,

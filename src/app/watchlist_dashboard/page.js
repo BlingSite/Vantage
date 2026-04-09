@@ -82,6 +82,13 @@ export default function WatchlistDashboard() {
   const tickerDropdownRef = useRef(null);
   const tickerSearchTimer = useRef(null);
 
+  // Watchlist management state
+  const [watchlistMenuId, setWatchlistMenuId] = useState(null);
+  const [renamingWatchlist, setRenamingWatchlist] = useState(null);
+  const [renameName, setRenameName] = useState("");
+  const [deletingWatchlistId, setDeletingWatchlistId] = useState(null);
+  const watchlistMenuRef = useRef(null);
+
   // New watchlist form state
   const [newWatchlistName, setNewWatchlistName] = useState("");
   const [newWatchlistIsDefault, setNewWatchlistIsDefault] = useState(false);
@@ -640,6 +647,64 @@ export default function WatchlistDashboard() {
     setShowNewWatchlistModal(false);
   };
 
+  useEffect(() => {
+    function handleClickOutsideMenu(e) {
+      if (watchlistMenuRef.current && !watchlistMenuRef.current.contains(e.target)) {
+        setWatchlistMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutsideMenu);
+    return () => document.removeEventListener("mousedown", handleClickOutsideMenu);
+  }, []);
+
+  const handleRenameWatchlist = async () => {
+    if (!renamingWatchlist || !renameName.trim()) return;
+    const trimmed = renameName.trim();
+    if (trimmed === renamingWatchlist.name) {
+      setRenamingWatchlist(null);
+      return;
+    }
+    if (watchlists.some((wl) => wl.id !== renamingWatchlist.id && wl.name.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("watchlists")
+        .update({ name: trimmed })
+        .eq("id", renamingWatchlist.id);
+      if (error) throw error;
+
+      const updated = watchlists.map((wl) =>
+        wl.id === renamingWatchlist.id ? { ...wl, name: trimmed } : wl
+      );
+      setWatchlists(updated);
+      if (activeWatchlist?.id === renamingWatchlist.id) {
+        setActiveWatchlist(updated.find((wl) => wl.id === renamingWatchlist.id));
+      }
+      setRenamingWatchlist(null);
+    } catch (err) {
+      console.error("Failed to rename watchlist:", err);
+    }
+  };
+
+  const handleDeleteWatchlist = async () => {
+    if (!deletingWatchlistId) return;
+    try {
+      await supabase.from("watchlist_items").delete().eq("watchlist_id", deletingWatchlistId);
+      const { error } = await supabase.from("watchlists").delete().eq("id", deletingWatchlistId);
+      if (error) throw error;
+
+      const updated = watchlists.filter((wl) => wl.id !== deletingWatchlistId);
+      setWatchlists(updated);
+      if (activeWatchlist?.id === deletingWatchlistId) {
+        setActiveWatchlist(updated[0] ?? null);
+      }
+      setDeletingWatchlistId(null);
+    } catch (err) {
+      console.error("Failed to delete watchlist:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -682,38 +747,66 @@ export default function WatchlistDashboard() {
           {/* Watchlist Items */}
           <nav className="space-y-1">
             {watchlists.map((watchlist) => (
-              <button
-                key={watchlist.id}
-                onClick={() => selectWatchlist(watchlist)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  activeWatchlist.id === watchlist.id
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {watchlist.name === "Tech Stocks" && (
-                  <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z"/>
+              <div key={watchlist.id} className="relative group">
+                <button
+                  onClick={() => selectWatchlist(watchlist)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    activeWatchlist?.id === watchlist.id
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <span className="flex-1 text-left truncate">{watchlist.name}</span>
+                  {watchlist.isDefault && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded shrink-0">Deflt</span>
+                  )}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setWatchlistMenuId(watchlistMenuId === watchlist.id ? null : watchlist.id);
+                  }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-opacity"
+                >
+                  <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                   </svg>
+                </button>
+                {watchlistMenuId === watchlist.id && (
+                  <div
+                    ref={watchlistMenuRef}
+                    className="absolute right-0 top-full mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenamingWatchlist(watchlist);
+                        setRenameName(watchlist.name);
+                        setWatchlistMenuId(null);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Rename
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingWatchlistId(watchlist.id);
+                        setWatchlistMenuId(null);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
                 )}
-                {watchlist.name === "Dividend Stocks" && (
-                  <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
-                  </svg>
-                )}
-                {watchlist.name === "Energy" && (
-                  <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
-                  </svg>
-                )}
-                <span className="flex-1 text-left">{watchlist.name}</span>
-                {watchlist.isDefault && (
-                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded">Deflt</span>
-                )}
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </button>
+              </div>
             ))}
           </nav>
 
@@ -1724,6 +1817,72 @@ export default function WatchlistDashboard() {
           )}
         </main>
       </div>
+
+      {/* Rename Watchlist Modal */}
+      {renamingWatchlist && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md mx-4 shadow-xl">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Rename Watchlist</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Enter a new name for &ldquo;{renamingWatchlist.name}&rdquo;.
+            </p>
+            <input
+              type="text"
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRenameWatchlist();
+                if (e.key === "Escape") setRenamingWatchlist(null);
+              }}
+              maxLength={200}
+              autoFocus
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            />
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={() => setRenamingWatchlist(null)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameWatchlist}
+                disabled={!renameName.trim() || renameName.trim() === renamingWatchlist.name}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Watchlist Confirmation Modal */}
+      {deletingWatchlistId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md mx-4 shadow-xl">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Delete Watchlist</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Are you sure you want to delete &ldquo;{watchlists.find((wl) => wl.id === deletingWatchlistId)?.name}&rdquo;?
+              All stocks in this watchlist will be removed. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeletingWatchlistId(null)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteWatchlist}
+                className="px-6 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Watchlist Modal */}
       {showNewWatchlistModal && (
