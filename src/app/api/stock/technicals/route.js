@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCustomBars, getTickerOverview, getFinancials } from "@/lib/massive";
+import { getCustomBars, getTickerOverview, getFinancials, getDividends } from "@/lib/massive";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export async function GET(request) {
 
     const perSymbol = await Promise.all(
       symbols.map(async (symbol) => {
-        const [barsResult, overviewResult, financialsResult] = await Promise.allSettled([
+        const [barsResult, overviewResult, financialsResult, dividendsResult] = await Promise.allSettled([
           getCustomBars(symbol, {
             timespan: "day",
             from: oneYearAgo,
@@ -46,6 +46,7 @@ export async function GET(request) {
           }),
           getTickerOverview(symbol),
           getFinancials(symbol, { limit: 4, timeframe: "quarterly" }),
+          getDividends(symbol, { limit: 4, sort: "ex_dividend_date", order: "desc" }),
         ]);
 
         const bars =
@@ -59,6 +60,10 @@ export async function GET(request) {
         const financials =
           financialsResult.status === "fulfilled"
             ? financialsResult.value?.results ?? []
+            : [];
+        const dividends =
+          dividendsResult.status === "fulfilled"
+            ? dividendsResult.value?.results ?? []
             : [];
 
         const closes = bars.map((b) => b.c).filter((c) => c != null);
@@ -90,6 +95,35 @@ export async function GET(request) {
           currentPrice
         );
 
+        const { ttmEps, ttmRevenue, ttmNetIncome } = computeTTMFundamentals(financials);
+
+        const sharesOutstanding =
+          overview.share_class_shares_outstanding ??
+          overview.weighted_shares_outstanding ??
+          null;
+
+        const recurring = dividends.filter(
+          (d) =>
+            d.cash_amount != null &&
+            Number(d.cash_amount) > 0 &&
+            d.dividend_type !== "SC" &&
+            d.dividend_type !== "LT" &&
+            d.dividend_type !== "ST"
+        );
+        const freq = recurring[0]?.frequency ?? 4;
+        const paymentsPerYear = freq > 0 ? freq : 4;
+        const recentDivs = recurring.slice(0, paymentsPerYear);
+        const annualDividend =
+          recentDivs.length > 0
+            ? recentDivs.reduce((s, d) => s + Number(d.cash_amount), 0) *
+              (paymentsPerYear / recentDivs.length)
+            : null;
+        const dividendYield =
+          annualDividend != null && currentPrice > 0
+            ? Number(((annualDividend / currentPrice) * 100).toFixed(2))
+            : null;
+        const exDividendDate = recurring[0]?.ex_dividend_date ?? null;
+
         return [
           symbol,
           {
@@ -104,6 +138,13 @@ export async function GET(request) {
             beta,
             support,
             resistance,
+            eps: ttmEps,
+            revenue: ttmRevenue,
+            netIncome: ttmNetIncome,
+            sharesOutstanding,
+            annualDividend: annualDividend != null ? Number(annualDividend.toFixed(2)) : null,
+            dividendYield,
+            exDividendDate,
           },
         ];
       })
@@ -144,6 +185,37 @@ function computeSMA(closes, period) {
   const slice = closes.slice(-period);
   const sum = slice.reduce((a, b) => a + b, 0);
   return Number((sum / period).toFixed(2));
+}
+
+/**
+ * Trailing-twelve-month EPS, Revenue, and Net Income from the last 4 quarterly filings.
+ */
+function computeTTMFundamentals(financials) {
+  const result = { ttmEps: null, ttmRevenue: null, ttmNetIncome: null };
+  if (!Array.isArray(financials) || financials.length === 0) return result;
+
+  let eps = 0, revenue = 0, netIncome = 0;
+  let epsQ = 0, revQ = 0, niQ = 0;
+
+  for (const filing of financials) {
+    const inc = filing?.financials?.income_statement;
+    if (!inc) continue;
+
+    const e = inc.diluted_earnings_per_share?.value ?? inc.basic_earnings_per_share?.value ?? null;
+    if (e != null) { eps += e; epsQ++; }
+
+    const r = inc.revenues?.value ?? null;
+    if (r != null) { revenue += r; revQ++; }
+
+    const ni = inc.net_income_loss?.value ?? null;
+    if (ni != null) { netIncome += ni; niQ++; }
+  }
+
+  if (epsQ > 0) result.ttmEps = Number((epsQ < 4 ? (eps / epsQ) * 4 : eps).toFixed(2));
+  if (revQ > 0) result.ttmRevenue = revQ < 4 ? (revenue / revQ) * 4 : revenue;
+  if (niQ > 0) result.ttmNetIncome = niQ < 4 ? (netIncome / niQ) * 4 : netIncome;
+
+  return result;
 }
 
 /**

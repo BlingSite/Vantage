@@ -353,6 +353,32 @@ export default function WatchlistDashboard() {
     return `$${cap.toFixed(0)}M`;
   };
 
+  const formatLargeNumber = (val) => {
+    if (val == null) return "—";
+    const abs = Math.abs(val);
+    const sign = val < 0 ? "-" : "";
+    if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
+    if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+    if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+    return `${sign}$${abs.toLocaleString()}`;
+  };
+
+  const formatShares = (val) => {
+    if (val == null) return "—";
+    if (val >= 1e9) return `${(val / 1e9).toFixed(2)}B`;
+    if (val >= 1e6) return `${(val / 1e6).toFixed(2)}M`;
+    if (val >= 1e3) return `${(val / 1e3).toFixed(2)}K`;
+    return val.toLocaleString();
+  };
+
+  const formatVolume = (vol) => {
+    if (vol == null) return "—";
+    if (vol >= 1e9) return `${(vol / 1e9).toFixed(2)}B`;
+    if (vol >= 1e6) return `${(vol / 1e6).toFixed(2)}M`;
+    if (vol >= 1e3) return `${(vol / 1e3).toFixed(1)}K`;
+    return vol.toLocaleString();
+  };
+
   const getStockLogo = (symbol) => {
     switch (symbol) {
       case "AAPL":
@@ -1109,116 +1135,162 @@ export default function WatchlistDashboard() {
                         {!t ? (
                           <div className="p-6 text-sm text-gray-400">Loading indicators...</div>
                         ) : (
-                          <div className="p-6">
-                            {/* Key Metrics Row */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Market Cap</div>
-                                <div className="text-lg font-semibold text-gray-900 mt-1 tabular-nums">{formatMarketCap(t.marketCap)}</div>
-                              </div>
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">P/E Ratio</div>
-                                <div className="text-lg font-semibold text-gray-900 mt-1 tabular-nums">{t.peRatio != null ? Number(t.peRatio).toFixed(2) : "—"}</div>
-                              </div>
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Beta</div>
-                                <div className="text-lg font-semibold text-gray-900 mt-1 tabular-nums">{t.beta != null ? Number(t.beta).toFixed(2) : "—"}</div>
-                              </div>
-                              <div className="bg-gray-50 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">RSI (14)</div>
-                                <div className={`text-lg font-semibold mt-1 tabular-nums ${getRSIColor(t.rsi)}`}>{t.rsi != null ? t.rsi : "—"}</div>
-                                {t.rsi != null && <div className={`text-xs font-medium ${getRSIColor(t.rsi)}`}>{getRSILabel(t.rsi)}</div>}
+                          <div className="p-6 space-y-6">
+                            {/* Stock Overview — two-column key/value table */}
+                            <div>
+                              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                {/* Left column */}
+                                <div className="divide-y divide-gray-100">
+                                  {[
+                                    ["Market Cap", formatMarketCap(t.marketCap)],
+                                    ["Revenue (ttm)", formatLargeNumber(t.revenue)],
+                                    ["Net Income", formatLargeNumber(t.netIncome)],
+                                    ["EPS (ttm)", t.eps != null ? `$${Number(t.eps).toFixed(2)}` : "—"],
+                                    ["Shares Out", formatShares(t.sharesOutstanding)],
+                                    ["PE Ratio", t.peRatio != null ? Number(t.peRatio).toFixed(2) : "—"],
+                                    [
+                                      "Dividend",
+                                      t.annualDividend != null
+                                        ? `$${Number(t.annualDividend).toFixed(2)}${t.dividendYield != null ? ` (${Number(t.dividendYield).toFixed(2)}%)` : ""}`
+                                        : "—",
+                                    ],
+                                    ["Ex-Dividend Date", t.exDividendDate ?? "—"],
+                                  ].map(([label, value]) => (
+                                    <div key={label} className="flex items-center justify-between py-2">
+                                      <span className="text-sm text-gray-500">{label}</span>
+                                      <span className="text-sm font-medium text-gray-900 tabular-nums">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Right column */}
+                                <div className="divide-y divide-gray-100">
+                                  {[
+                                    ["Volume", formatVolume(quote?.v)],
+                                    ["Open", quote?.o != null ? `$${Number(quote.o).toFixed(2)}` : "—"],
+                                    ["Previous Close", quote?.pc != null ? `$${Number(quote.pc).toFixed(2)}` : "—"],
+                                    [
+                                      "Day's Range",
+                                      quote?.l != null && quote?.h != null
+                                        ? `$${Number(quote.l).toFixed(2)} – $${Number(quote.h).toFixed(2)}`
+                                        : "—",
+                                    ],
+                                    [
+                                      "52-Week Range",
+                                      t.week52Low != null && t.week52High != null
+                                        ? `$${Number(t.week52Low).toFixed(2)} – $${Number(t.week52High).toFixed(2)}`
+                                        : "—",
+                                    ],
+                                    ["Beta", t.beta != null ? Number(t.beta).toFixed(2) : "—"],
+                                  ].map(([label, value]) => (
+                                    <div key={label} className="flex items-center justify-between py-2">
+                                      <span className="text-sm text-gray-500">{label}</span>
+                                      <span className="text-sm font-medium text-gray-900 tabular-nums">{value}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
 
-                            {/* 52-Week Range */}
-                            <div className="mb-6">
-                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">52-Week Range</div>
-                              {t.week52High != null && t.week52Low != null ? (
-                                <div>
-                                  <div className="flex items-center justify-between text-sm mb-1">
-                                    <span className="font-medium text-gray-700 tabular-nums">${Number(t.week52Low).toFixed(2)}</span>
-                                    <span className="font-medium text-gray-700 tabular-nums">${Number(t.week52High).toFixed(2)}</span>
-                                  </div>
-                                  <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div className="h-full bg-linear-to-r from-red-300 via-yellow-300 to-green-300 rounded-full opacity-60 w-full" />
-                                    {price != null && t.week52High !== t.week52Low && (
-                                      <div
-                                        className="absolute top-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow"
-                                        style={{
-                                          left: `${Math.min(100, Math.max(0, ((price - t.week52Low) / (t.week52High - t.week52Low)) * 100))}%`,
-                                          transform: "translate(-50%, -50%)",
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                  {price != null && (
-                                    <div className="text-center text-xs text-gray-500 mt-1">
-                                      Current: <span className="font-medium text-gray-700">${Number(price).toFixed(2)}</span>
-                                      {" · "}
-                                      {Number(((price - t.week52Low) / (t.week52High - t.week52Low) * 100).toFixed(0))}% of range
+                            {/* Technical Indicators Section */}
+                            <div>
+                              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Technical Indicators</h4>
+
+                              {/* RSI + Key Technicals Row */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">RSI (14)</div>
+                                  <div className={`text-lg font-semibold mt-1 tabular-nums ${getRSIColor(t.rsi)}`}>{t.rsi != null ? t.rsi : "—"}</div>
+                                  {t.rsi != null && <div className={`text-xs font-medium ${getRSIColor(t.rsi)}`}>{getRSILabel(t.rsi)}</div>}
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">50-Day SMA</div>
+                                  <div className="text-lg font-semibold text-gray-900 mt-1 tabular-nums">{t.sma50 != null ? `$${Number(t.sma50).toFixed(2)}` : "—"}</div>
+                                  {t.sma50 != null && price != null && (
+                                    <div className={`text-xs font-medium ${price > t.sma50 ? "text-green-600" : "text-red-600"}`}>
+                                      Price is {price > t.sma50 ? "above" : "below"}
                                     </div>
                                   )}
                                 </div>
-                              ) : (
-                                <div className="text-sm text-gray-400">—</div>
-                              )}
-                            </div>
-
-                            {/* MAs and Support/Resistance */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <div className="border border-gray-200 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">50-Day SMA</div>
-                                <div className="text-base font-semibold text-gray-900 mt-1 tabular-nums">{t.sma50 != null ? `$${Number(t.sma50).toFixed(2)}` : "—"}</div>
-                                {t.sma50 != null && price != null && (
-                                  <div className={`text-xs font-medium mt-0.5 ${price > t.sma50 ? "text-green-600" : "text-red-600"}`}>
-                                    Price is {price > t.sma50 ? "above" : "below"}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="border border-gray-200 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">200-Day SMA</div>
-                                <div className="text-base font-semibold text-gray-900 mt-1 tabular-nums">{t.sma200 != null ? `$${Number(t.sma200).toFixed(2)}` : "—"}</div>
-                                {t.sma200 != null && price != null && (
-                                  <div className={`text-xs font-medium mt-0.5 ${price > t.sma200 ? "text-green-600" : "text-red-600"}`}>
-                                    Price is {price > t.sma200 ? "above" : "below"}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="border border-gray-200 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Support</div>
-                                <div className="text-base font-semibold text-green-700 mt-1 tabular-nums">{t.support != null ? `$${Number(t.support).toFixed(2)}` : "—"}</div>
-                                {t.support != null && price != null && (
-                                  <div className="text-xs text-gray-500 mt-0.5">{((1 - t.support / price) * 100).toFixed(1)}% below</div>
-                                )}
-                              </div>
-                              <div className="border border-gray-200 rounded-lg p-3">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Resistance</div>
-                                <div className="text-base font-semibold text-red-700 mt-1 tabular-nums">{t.resistance != null ? `$${Number(t.resistance).toFixed(2)}` : "—"}</div>
-                                {t.resistance != null && price != null && (
-                                  <div className="text-xs text-gray-500 mt-0.5">{((t.resistance / price - 1) * 100).toFixed(1)}% above</div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* MA Cross Signal */}
-                            {t.sma50 != null && t.sma200 != null && (
-                              <div className="mt-4 pt-4 border-t border-gray-100">
-                                <div className="flex items-center gap-2 text-sm">
-                                  {t.sma50 > t.sma200 ? (
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">200-Day SMA</div>
+                                  <div className="text-lg font-semibold text-gray-900 mt-1 tabular-nums">{t.sma200 != null ? `$${Number(t.sma200).toFixed(2)}` : "—"}</div>
+                                  {t.sma200 != null && price != null && (
+                                    <div className={`text-xs font-medium ${price > t.sma200 ? "text-green-600" : "text-red-600"}`}>
+                                      Price is {price > t.sma200 ? "above" : "below"}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">MA Signal</div>
+                                  {t.sma50 != null && t.sma200 != null ? (
                                     <>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Golden Cross</span>
-                                      <span className="text-gray-500">50-day SMA is above 200-day SMA — bullish signal</span>
+                                      <div className={`text-lg font-semibold mt-1 ${t.sma50 > t.sma200 ? "text-green-600" : "text-red-600"}`}>
+                                        {t.sma50 > t.sma200 ? "Golden Cross" : "Death Cross"}
+                                      </div>
+                                      <div className={`text-xs font-medium ${t.sma50 > t.sma200 ? "text-green-600" : "text-red-600"}`}>
+                                        {t.sma50 > t.sma200 ? "Bullish" : "Bearish"}
+                                      </div>
                                     </>
                                   ) : (
-                                    <>
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Death Cross</span>
-                                      <span className="text-gray-500">50-day SMA is below 200-day SMA — bearish signal</span>
-                                    </>
+                                    <div className="text-lg font-semibold text-gray-400 mt-1">—</div>
                                   )}
                                 </div>
                               </div>
-                            )}
+
+                              {/* 52-Week Range Visual */}
+                              <div className="mb-6">
+                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">52-Week Range</div>
+                                {t.week52High != null && t.week52Low != null ? (
+                                  <div>
+                                    <div className="flex items-center justify-between text-sm mb-1">
+                                      <span className="font-medium text-gray-700 tabular-nums">${Number(t.week52Low).toFixed(2)}</span>
+                                      <span className="font-medium text-gray-700 tabular-nums">${Number(t.week52High).toFixed(2)}</span>
+                                    </div>
+                                    <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                                      <div className="h-full bg-linear-to-r from-red-300 via-yellow-300 to-green-300 rounded-full opacity-60 w-full" />
+                                      {price != null && t.week52High !== t.week52Low && (
+                                        <div
+                                          className="absolute top-1/2 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow"
+                                          style={{
+                                            left: `${Math.min(100, Math.max(0, ((price - t.week52Low) / (t.week52High - t.week52Low)) * 100))}%`,
+                                            transform: "translate(-50%, -50%)",
+                                          }}
+                                        />
+                                      )}
+                                    </div>
+                                    {price != null && (
+                                      <div className="text-center text-xs text-gray-500 mt-1">
+                                        Current: <span className="font-medium text-gray-700">${Number(price).toFixed(2)}</span>
+                                        {" · "}
+                                        {Number(((price - t.week52Low) / (t.week52High - t.week52Low) * 100).toFixed(0))}% of range
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-400">—</div>
+                                )}
+                              </div>
+
+                              {/* Support / Resistance */}
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="border border-gray-200 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Support</div>
+                                  <div className="text-base font-semibold text-green-700 mt-1 tabular-nums">{t.support != null ? `$${Number(t.support).toFixed(2)}` : "—"}</div>
+                                  {t.support != null && price != null && (
+                                    <div className="text-xs text-gray-500 mt-0.5">{((1 - t.support / price) * 100).toFixed(1)}% below</div>
+                                  )}
+                                </div>
+                                <div className="border border-gray-200 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Resistance</div>
+                                  <div className="text-base font-semibold text-red-700 mt-1 tabular-nums">{t.resistance != null ? `$${Number(t.resistance).toFixed(2)}` : "—"}</div>
+                                  {t.resistance != null && price != null && (
+                                    <div className="text-xs text-gray-500 mt-0.5">{((t.resistance / price - 1) * 100).toFixed(1)}% above</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
