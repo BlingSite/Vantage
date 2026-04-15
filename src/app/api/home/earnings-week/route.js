@@ -77,11 +77,17 @@ export async function GET() {
       }
     }
 
-    const sorted = [...seen.values()].sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return b.marketCap - a.marketCap;
-    });
-    const top = sorted.slice(0, 15);
+    const byDay = new Map();
+    for (const r of seen.values()) {
+      if (!byDay.has(r.date)) byDay.set(r.date, []);
+      byDay.get(r.date).push(r);
+    }
+    const PER_DAY = 5;
+    const top = [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .flatMap(([, items]) =>
+        items.sort((a, b) => b.marketCap - a.marketCap).slice(0, PER_DAY)
+      );
 
     const snapshots = await Promise.allSettled(
       top.map((s) =>

@@ -19,18 +19,6 @@ function priceFmt(p) {
   return `$${Number(p).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const TIMING_STYLES = {
-  BMO: "bg-sky-50 text-sky-700 ring-sky-200",
-  AMC: "bg-violet-50 text-violet-700 ring-violet-200",
-  DMH: "bg-gray-50 text-gray-600 ring-gray-200",
-};
-
-const TIMING_LABELS = {
-  BMO: "Pre",
-  AMC: "Post",
-  DMH: "Intra",
-};
-
 function formatDayHeader(dateStr) {
   const d = new Date(dateStr + "T12:00:00");
   return d.toLocaleDateString("en-US", {
@@ -121,13 +109,18 @@ export default function EarningsThisWeek({ className = "" }) {
           No earnings data available this week
         </div>
       ) : (
-        <div className="p-5 space-y-4">
-          {grouped.map(([date, items]) => (
-            <div key={date}>
-              <p className="text-[10px] font-semibold tracking-wider uppercase text-gray-400 mb-2">
-                {formatDayHeader(date)}
-              </p>
-              <div className="space-y-1">
+        <div className="divide-y divide-gray-100">
+          {grouped.map(([date, items], idx) => (
+            <div key={date} className="px-5 py-3.5">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-[11px] font-semibold text-gray-900">
+                  {formatDayHeader(date)}
+                </span>
+                <span className="text-[10px] text-gray-400 tabular-nums">
+                  {items.length} {items.length === 1 ? "stock" : "stocks"}
+                </span>
+              </div>
+              <div className="space-y-0.5">
                 {items.map((s) => {
                   const pct = pctFmt(s.changePercent);
                   const up = s.changePercent >= 0;
@@ -143,13 +136,6 @@ export default function EarningsThisWeek({ className = "" }) {
                       <span className="min-w-0 flex-1 truncate text-xs text-gray-500 group-hover:text-gray-700 transition-colors">
                         {s.name}
                       </span>
-                      {s.timing && (
-                        <span
-                          className={`shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ring-1 ring-inset ${TIMING_STYLES[s.timing] ?? TIMING_STYLES.DMH}`}
-                        >
-                          {TIMING_LABELS[s.timing] ?? s.timing}
-                        </span>
-                      )}
                       {s.epsForecast && (
                         <span className="shrink-0 text-[10px] text-gray-400 tabular-nums w-16 text-right" title="Consensus EPS forecast">
                           Est {s.epsForecast}
