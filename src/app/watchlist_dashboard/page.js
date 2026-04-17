@@ -999,7 +999,9 @@ export default function WatchlistDashboard() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {getStockLogo(stock.symbol)}
-                        <span className="font-semibold text-gray-900">{stock.symbol}</span>
+                        <Link href={`/stock/${stock.symbol}`} className="font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                          {stock.symbol}
+                        </Link>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-600">{stock.name}</td>
