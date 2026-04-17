@@ -101,6 +101,12 @@ export default function AuthControls() {
           >
             Sign in with email
           </Link>
+          <Link
+            href="/register"
+            className="flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+          >
+            Create an account
+          </Link>
         </div>
       )}
     </div>

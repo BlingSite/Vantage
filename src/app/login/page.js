@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const VIEW = { SIGN_IN: "sign_in", SIGN_UP: "sign_up", FORGOT: "forgot" };
+const VIEW = { SIGN_IN: "sign_in", FORGOT: "forgot" };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,21 +31,6 @@ export default function LoginPage() {
     if (error) return setError(error.message);
     router.push("/");
     router.refresh();
-  }
-
-  async function handleSignUp(e) {
-    e.preventDefault();
-    reset();
-    setBusy(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
-    });
-    setBusy(false);
-    if (error) return setError(error.message);
-    setMessage("Check your email for a confirmation link to complete sign-up.");
   }
 
   async function handleForgotPassword(e) {
@@ -79,15 +64,13 @@ export default function LoginPage() {
     <div className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <h1 className="text-center text-xl font-semibold text-gray-900">
-          {view === VIEW.SIGN_IN && "Sign in to Vantage"}
-          {view === VIEW.SIGN_UP && "Create your account"}
-          {view === VIEW.FORGOT && "Reset your password"}
+          {view === VIEW.SIGN_IN ? "Sign in to Vantage" : "Reset your password"}
         </h1>
 
         <p className="mt-1 text-center text-sm text-gray-500">
-          {view === VIEW.SIGN_IN && "Enter your email and password to continue."}
-          {view === VIEW.SIGN_UP && "Sign up with your email to get started."}
-          {view === VIEW.FORGOT && "We\u2019ll send a reset link to your email."}
+          {view === VIEW.SIGN_IN
+            ? "Enter your email and password to continue."
+            : "We\u2019ll send a reset link to your email."}
         </p>
 
         {view === VIEW.SIGN_IN && (
@@ -132,13 +115,7 @@ export default function LoginPage() {
 
         {!message && (
           <form
-            onSubmit={
-              view === VIEW.SIGN_IN
-                ? handleSignIn
-                : view === VIEW.SIGN_UP
-                  ? handleSignUp
-                  : handleForgotPassword
-            }
+            onSubmit={view === VIEW.SIGN_IN ? handleSignIn : handleForgotPassword}
             className={view === VIEW.SIGN_IN ? "" : "mt-6"}
           >
             <label className="block text-sm font-medium text-gray-700">
@@ -154,18 +131,18 @@ export default function LoginPage() {
               />
             </label>
 
-            {view !== VIEW.FORGOT && (
+            {view === VIEW.SIGN_IN && (
               <label className="mt-3 block text-sm font-medium text-gray-700">
                 Password
                 <input
                   type="password"
                   required
-                  autoComplete={view === VIEW.SIGN_IN ? "current-password" : "new-password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={6}
                   className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
-                  placeholder={view === VIEW.SIGN_UP ? "At least 6 characters" : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
+                  placeholder={"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
                 />
               </label>
             )}
@@ -191,9 +168,7 @@ export default function LoginPage() {
                 ? "Please wait\u2026"
                 : view === VIEW.SIGN_IN
                   ? "Sign in"
-                  : view === VIEW.SIGN_UP
-                    ? "Create account"
-                    : "Send reset link"}
+                  : "Send reset link"}
             </button>
           </form>
         )}
@@ -202,13 +177,13 @@ export default function LoginPage() {
           {view === VIEW.SIGN_IN ? (
             <>
               Don&apos;t have an account?{" "}
-              <button type="button" onClick={() => { setView(VIEW.SIGN_UP); reset(); setPassword(""); }} className="font-medium text-gray-900 hover:underline">
+              <Link href="/register" className="font-medium text-gray-900 hover:underline">
                 Sign up
-              </button>
+              </Link>
             </>
           ) : (
             <>
-              Already have an account?{" "}
+              Remember your password?{" "}
               <button type="button" onClick={() => { setView(VIEW.SIGN_IN); reset(); setPassword(""); }} className="font-medium text-gray-900 hover:underline">
                 Sign in
               </button>
